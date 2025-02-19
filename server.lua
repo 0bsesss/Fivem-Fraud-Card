@@ -1,4 +1,3 @@
-
 local QBCore = exports['qb-core']:GetCoreObject()
 
 RegisterNetEvent('qb_frauding:server:AddMoney', function()
