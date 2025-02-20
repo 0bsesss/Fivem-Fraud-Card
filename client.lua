@@ -1,5 +1,14 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 
+Config = {}
+Config.RequiredPolice = 2 
+Config.ATMRequiredItem = 'stolen_card' 
+Config.ProgressBarTime = math.random(8000, 15000) 
+Config.ATMProps = { 'prop_atm_01', 'prop_atm_02', 'prop_atm_03', 'prop_fleeca_atm' }
+Config.ATMIcon = 'fas fa-credit-card'
+Config.ATMLabel = 'ATM Hack'
+Config.RewardMoney = math.random(1000, 5000)
+
 RegisterNetEvent('qb_frauding:server:AddMoney', function()
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
@@ -15,70 +24,70 @@ RegisterNetEvent('qb_frauding:server:AddMoney', function()
     end
 end)
 
-Config = {}
-Config.RequiredPolice = 2 
-Config.ATMRequiredItem = 'stolen_card' 
-Config.ProgressBarTime = math.random(8000, 15000) 
-Config.ATMProps = { 'prop_atm_01', 'prop_atm_02', 'prop_atm_03', 'prop_fleeca_atm' }
-Config.ATMIcon = 'fas fa-credit-card'
-Config.ATMLabel = 'ATM Hack'
-Config.RewardMoney = math.random(1000, 5000)
-
 Citizen.CreateThread(function()
     while true do
-        Citizen.Wait(1000) -- Döngüyü 1 saniyede bir çalıştır
-        local playerCoords = GetEntityCoords(PlayerPedId())
+        Citizen.Wait(1000) 
+        local playerPed = PlayerPedId()
+        local playerCoords = GetEntityCoords(playerPed)
         for _, atm in pairs(Config.ATMProps) do
-            local atmObj = GetClosestObjectOfType(playerCoords, 1.0, GetHashKey(atm), false, false, false)
+            local atmObj = GetClosestObjectOfType(playerCoords, 1.5, GetHashKey(atm), false, false, false)
             if atmObj then
-                local distance = #(playerCoords - GetEntityCoords(atmObj))
-                if distance < 3.0 then
-                    while distance < 3.0 do
-                        Citizen.Wait(0)
-                        if IsControlJustPressed(0, 38) then
-                            local hasCard = QBCore.Functions.HasItem('stolen_card')
-                            if hasCard then
-                                TriggerEvent('animations:client:EmoteCommandStart', {"atm"})
-
-                                TriggerEvent('inventory:client:CloseInventory')
-                                DisableControlAction(0, 24, true)
-                                DisableControlAction(0, 25, true)
-                                DisableControlAction(0, 37, true)
-                                DisableControlAction(0, 199, true)
-
-                                -- Progress bar
-                                QBCore.Functions.Progressbar("atm_hack", "Çalıntı Kredi Kartı ATM'ye Takılıyor...", Config.ProgressBarTime, false, true, {
-                                    disableMovement = true,
-                                    disableCarMovement = false,
-                                    disableMouse = false,
-                                    disableCombat = true,
-                                }, {}, {}, {}, function()
-                                    -- Minigame başlat
-                                    exports['ps-ui']:VarHack(function(success)
-                                        Citizen.Wait(500)
-                                        EnableControlAction(0, 24, true)
-                                        EnableControlAction(0, 25, true)
-                                        EnableControlAction(0, 37, true)
-                                        EnableControlAction(0, 199, true)
-
-                                        -- Animasyonu durdur
-                                        TriggerEvent('animations:client:EmoteCommandStart', {"c"})
-
-                                        if success then
-                                            TriggerServerEvent('qb_frauding:server:AddMoney')
-                                            TriggerEvent('QBCore:Notify', 'Kredi Kartında Para Var, Para Çekiliyor!', 'success')
-                                        else
-                                            TriggerEvent('QBCore:Notify', 'Kredi Kartının Şifresini Yanlış Girdin!', 'error')
-                                        end
-                                    end, 5, 5)
-                                end)
-                            else
-                                TriggerEvent('QBCore:Notify', 'Çalıntı Kredi Kartın Yok!', 'error')
-                            end
-                        end
-                        distance = #(playerCoords - GetEntityCoords(atmObj))
-                    end
+                local atmCoords = GetEntityCoords(atmObj)
+                local distance = #(playerCoords - atmCoords)
+                if distance < 1.5 then
+                    TriggerEvent('qb-frauding:client:ShowATMOptions', atmCoords)
                 end
+            end
+        end
+    end
+end)
+
+RegisterNetEvent('qb-frauding:client:ShowATMOptions', function(atmCoords)
+    while true do
+        Citizen.Wait(0)
+        local playerPed = PlayerPedId()
+        local playerCoords = GetEntityCoords(playerPed)
+        local distance = #(playerCoords - atmCoords)
+        
+        if distance > 1.5 then
+            break
+        end
+        
+        if IsControlJustPressed(0, 38) then
+            local hasCard = QBCore.Functions.HasItem('stolen_card')
+            if hasCard then
+                TriggerEvent('animations:client:EmoteCommandStart', {"atm"})
+                TriggerEvent('inventory:client:CloseInventory')
+                DisableControlAction(0, 24, true)
+                DisableControlAction(0, 25, true)
+                DisableControlAction(0, 37, true)
+                DisableControlAction(0, 199, true)
+                
+                QBCore.Functions.Progressbar("atm_hack", "Çalıntı Kredi Kartı ATM'ye Takılıyor...", Config.ProgressBarTime, false, true, {
+                    disableMovement = true,
+                    disableCarMovement = false,
+                    disableMouse = false,
+                    disableCombat = true,
+                }, {}, {}, {}, function()
+                    exports['ps-ui']:VarHack(function(success)
+                        Citizen.Wait(500)
+                        EnableControlAction(0, 24, true)
+                        EnableControlAction(0, 25, true)
+                        EnableControlAction(0, 37, true)
+                        EnableControlAction(0, 199, true)
+                        
+                        TriggerEvent('animations:client:EmoteCommandStart', {"c"})
+                        
+                        if success then
+                            TriggerServerEvent('qb_frauding:server:AddMoney')
+                            TriggerEvent('QBCore:Notify', 'Kredi Kartında Para Var, Para Çekiliyor!', 'success')
+                        else
+                            TriggerEvent('QBCore:Notify', 'Kredi Kartının Şifresini Yanlış Girdin!', 'error')
+                        end
+                    end, 5, 5)
+                end)
+            else
+                TriggerEvent('QBCore:Notify', 'Çalıntı Kredi Kartın Yok!', 'error')
             end
         end
     end
